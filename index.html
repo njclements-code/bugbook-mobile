@@ -28,6 +28,19 @@
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   }
+  :root[data-theme="light"]{
+    --bg:#F5F3EE;
+    --panel:#FFFFFF;
+    --panel-alt:#EFEBE3;
+    --line:#D9D4C9;
+    --line-soft:#E6E2D8;
+    --ink:#1C2024;
+    --ink-dim:#5B6066;
+    --ink-faint:#868C92;
+    --amber:#A9762E;
+    --red:#9C4530;
+    --green:#4C6F55;
+  }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   #bugbook{
     background:var(--bg);
@@ -265,7 +278,10 @@
 <div id="bugbook" class="hidden">
   <div id="syncBar">
     <span><span class="dot" id="syncDot"></span><span id="syncLabel">Not connected</span></span>
-    <button id="btnSettings">Settings</button>
+    <span style="display:flex; gap:8px;">
+      <button id="btnTheme">Light mode</button>
+      <button id="btnSettings">Settings</button>
+    </span>
   </div>
 
   <p class="eyebrow">The Personal Bug Book · Self-Observation Log</p>
@@ -386,7 +402,7 @@
   const SCOPE = "https://www.googleapis.com/auth/drive.file";
   const LS = {
     clientId: "bb_client_id", apiKey: "bb_api_key", appId: "bb_app_id",
-    fileId: "bb_file_id", cache: "bb_data_cache"
+    fileId: "bb_file_id", cache: "bb_data_cache", theme: "bb_theme"
   };
 
   let data = { name:"Nick", entries:[], weekly:[], rules:{sleep:"",env:"",bounds:""} };
@@ -412,14 +428,14 @@
 
   /* ---------------- setup screen wiring ---------------- */
 
-  function refreshSetupScreen(){
+  function refreshSetupScreen(autoAdvance){
     const c = cfg();
     $("cfgClientId").value = c.clientId;
     $("cfgApiKey").value = c.apiKey;
     $("cfgAppId").value = c.appId;
     $("btnSignIn").disabled = !(c.clientId && c.apiKey);
     $("btnPickFile").disabled = !accessToken;
-    if(c.fileId && accessToken){
+    if(autoAdvance !== false && c.fileId && accessToken){
       showMainApp();
     }
   }
@@ -456,7 +472,19 @@
   $("btnSettings").onclick = () => {
     $("bugbook").classList.add("hidden");
     $("setupScreen").classList.remove("hidden");
-    refreshSetupScreen();
+    refreshSetupScreen(false);
+  };
+
+  function applyTheme(){
+    const t = localStorage.getItem(LS.theme) || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+    $("btnTheme").textContent = t === "dark" ? "Light mode" : "Dark mode";
+  }
+
+  $("btnTheme").onclick = () => {
+    const cur = localStorage.getItem(LS.theme) || "dark";
+    localStorage.setItem(LS.theme, cur === "dark" ? "light" : "dark");
+    applyTheme();
   };
 
   /* ---------------- Google auth / API bootstrap ---------------- */
@@ -839,6 +867,7 @@
 
   data.rules = data.rules || {sleep:"",env:"",bounds:""};
   incidentRows = [];
+  applyTheme();
   refreshSetupScreen();
   initAuthIfReady();
 
