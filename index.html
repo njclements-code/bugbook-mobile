@@ -450,6 +450,8 @@
     refreshSetupScreen();
   };
 
+  let silentAttemptInProgress = false;
+
   $("btnSignIn").onclick = () => {
     if(!tokenClient){ initAuthIfReady(); }
     if(!tokenClient){
@@ -457,7 +459,10 @@
       $("signinStatus").className = "statusMsg err";
       return;
     }
-    tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" });
+    // Try a silent refresh first — if you've already granted access before,
+    // this reuses that grant instead of showing the full consent screen again.
+    silentAttemptInProgress = true;
+    tokenClient.requestAccessToken({ prompt: "" });
   };
 
   $("btnPickFile").onclick = () => {
@@ -507,11 +512,19 @@
       scope: SCOPE,
       callback: (resp) => {
         if(resp.error){
+          if(silentAttemptInProgress){
+            // Silent refresh couldn't complete without interaction (e.g. first-ever
+            // sign-in, or the grant was revoked) — fall back to the full consent screen.
+            silentAttemptInProgress = false;
+            tokenClient.requestAccessToken({ prompt: "consent" });
+            return;
+          }
           $("signinStatus").textContent = "Sign-in error: " + resp.error;
           $("signinStatus").className = "statusMsg err";
           setSyncStatus(false, "Sign-in failed");
           return;
         }
+        silentAttemptInProgress = false;
         accessToken = resp.access_token;
         $("signinStatus").textContent = "Signed in.";
         $("signinStatus").className = "statusMsg ok";
