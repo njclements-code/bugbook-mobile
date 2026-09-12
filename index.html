@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Personal Bug Book — Self-Observation Log</title>
+<meta name="theme-color" content="#15181B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  body{ margin:0; background:#15181B; }
+  :root{
+    --bg:#15181B;
+    --panel:#1C2024;
+    --panel-alt:#20262B;
+    --line:#33393F;
+    --line-soft:#282E33;
+    --ink:#E7E4DD;
+    --ink-dim:#9BA1A6;
+    --ink-faint:#666D73;
+    --amber:#C89B3C;
+    --red:#B4543A;
+    --green:#6E9277;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  #bugbook{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    padding:calc(env(safe-area-inset-top,0px) + 20px) 16px 60px;
+    max-width:760px;
+    margin:0 auto;
+    line-height:1.45;
+  }
+  #bugbook.hidden{ display:none; }
+  #bugbook .eyebrow{
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:.14em;
+    color:var(--ink-faint);
+    text-transform:uppercase;
+    margin:0 0 6px;
+  }
+  #bugbook h1{
+    font-size:20px;
+    font-weight:600;
+    letter-spacing:-.01em;
+    margin:0 0 2px;
+  }
+  #bugbook h2{
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink);
+    margin:0;
+  }
+  #bugbook .sub{ color:var(--ink-dim); font-size:13px; }
+
+  /* --- status bar --- */
+  #syncBar{
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:var(--mono); font-size:11px; color:var(--ink-dim);
+    border:1px solid var(--line); background:var(--panel);
+    padding:8px 12px; margin-bottom:14px;
+  }
+  #syncBar .dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--ink-faint); margin-right:7px; vertical-align:middle; }
+  #syncBar .dot.ok{ background:var(--green); }
+  #syncBar .dot.bad{ background:var(--red); }
+  #syncBar button{
+    background:none; border:1px solid var(--line); color:var(--ink-dim);
+    font-family:var(--mono); font-size:10.5px; padding:5px 9px; cursor:pointer;
+  }
+  #syncBar button:hover{ border-color:var(--ink-dim); color:var(--ink); }
+
+  #bugbook .headerCard{
+    border:1px solid var(--line);
+    background:var(--panel);
+    padding:18px 20px;
+    margin-bottom:18px;
+    position:relative;
+  }
+  #bugbook .headerCard::before{
+    content:"";
+    position:absolute; top:0; left:0; bottom:0; width:3px;
+    background:var(--amber);
+  }
+  #bugbook .tag{
+    display:inline-block;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--red);
+    border:1px solid var(--red);
+    padding:3px 8px;
+    margin-top:10px;
+    transform:rotate(-1deg);
+  }
+  #bugbook .nameInput{
+    background:transparent; border:none; border-bottom:1px dashed var(--line);
+    color:var(--ink); font-family:var(--sans); font-size:20px; font-weight:600;
+    padding:0 0 2px; width:auto; min-width:120px;
+  }
+  #bugbook .nameInput:focus{ outline:none; border-bottom-color:var(--amber); }
+
+  #bugbook .card{
+    border:1px solid var(--line);
+    background:var(--panel);
+    padding:16px 18px 18px;
+    margin-bottom:16px;
+  }
+  #bugbook .cardHead{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:1px solid var(--line-soft);
+    padding-bottom:10px; margin-bottom:14px;
+  }
+  #bugbook .fig{ font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); }
+
+  #bugbook label{
+    display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-dim); margin-bottom:5px;
+  }
+  #bugbook input[type=text], #bugbook input[type=number], #bugbook input[type=date],
+  #bugbook input[type=password], #bugbook textarea, #bugbook select{
+    width:100%; background:var(--panel-alt); border:1px solid var(--line);
+    color:var(--ink); font-family:var(--mono); font-size:16px; padding:9px 9px;
+  }
+  #bugbook input:focus, #bugbook textarea:focus, #bugbook select:focus{ outline:none; border-color:var(--amber); }
+  #bugbook textarea{ resize:vertical; min-height:44px; font-family:var(--sans); font-size:13px; }
+
+  #bugbook .row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+  #bugbook .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px; }
+  @media(max-width:520px){ #bugbook .row, #bugbook .row3{ grid-template-columns:1fr; } }
+
+  #bugbook .vitals{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  #bugbook .vital{
+    font-family:var(--mono); font-size:12px; letter-spacing:.02em;
+    border:1px solid var(--line); padding:9px 12px; cursor:pointer;
+    color:var(--ink-dim); user-select:none; transition:.12s;
+  }
+  #bugbook .vital.on{ border-color:var(--green); color:var(--green); background:rgba(110,146,119,.08); }
+
+  #bugbook table{ width:100%; border-collapse:collapse; margin-bottom:10px; }
+  #bugbook th{
+    font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-faint); text-align:left; padding:5px 6px; border-bottom:1px solid var(--line);
+  }
+  #bugbook td{ padding:5px 6px; border-bottom:1px solid var(--line-soft); vertical-align:top; }
+  #bugbook td input, #bugbook td select{ padding:6px 6px; font-size:13px; }
+  #bugbook .delRow{
+    background:none; border:1px solid var(--line); color:var(--ink-faint);
+    font-family:var(--mono); font-size:11px; padding:5px 8px; cursor:pointer;
+  }
+  #bugbook .delRow:hover{ border-color:var(--red); color:var(--red); }
+
+  #bugbook button.primary{
+    background:var(--amber); color:#1A1500; border:none; font-family:var(--mono);
+    font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:700;
+    padding:11px 16px; cursor:pointer;
+  }
+  #bugbook button.primary:hover{ background:#DBAE4E; }
+  #bugbook button.ghost{
+    background:none; border:1px solid var(--line); color:var(--ink-dim);
+    font-family:var(--mono); font-size:11px; letter-spacing:.04em; text-transform:uppercase;
+    padding:9px 13px; cursor:pointer;
+  }
+  #bugbook button.ghost:hover{ border-color:var(--ink-dim); color:var(--ink); }
+
+  #bugbook .gauge{ border:1px solid var(--line); height:22px; background:var(--panel-alt); position:relative; margin:8px 0 4px; }
+  #bugbook .gaugeFill{ height:100%; background:var(--green); transition:width .3s; }
+  #bugbook .gaugeFill.warn{ background:var(--red); }
+  #bugbook .gaugeMark{ position:absolute; top:-3px; bottom:-3px; width:1px; background:var(--ink-dim); }
+  #bugbook .gaugeMark::after{
+    content:"70h min"; position:absolute; top:-16px; left:3px;
+    font-family:var(--mono); font-size:9px; color:var(--ink-faint); white-space:nowrap;
+  }
+  #bugbook .statLine{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:11.5px; color:var(--ink-dim); }
+
+  #bugbook .entryItem{
+    border-bottom:1px solid var(--line-soft); padding:10px 0; font-size:12.5px;
+    display:flex; justify-content:space-between; gap:10px; align-items:flex-start;
+  }
+  #bugbook .entryItem:last-child{ border-bottom:none; }
+  #bugbook .entryMeta{ font-family:var(--mono); color:var(--ink-dim); font-size:11px; }
+  #bugbook .scoreBadge{
+    font-family:var(--mono); font-size:11px; border:1px solid var(--line); padding:2px 7px;
+  }
+  #bugbook .empty{ color:var(--ink-faint); font-size:12.5px; font-style:italic; padding:6px 0; }
+
+  #bugbook .rulesGrid{ display:grid; gap:14px; }
+  #bugbook .ruleLabel{ font-family:var(--mono); font-size:10.5px; color:var(--amber); letter-spacing:.06em; text-transform:uppercase; }
+
+  #bugbook .footNote{ font-family:var(--mono); font-size:10px; color:var(--ink-faint); text-align:center; margin-top:26px; }
+  #bugbook .savedFlash{ font-family:var(--mono); font-size:10.5px; color:var(--green); margin-left:10px; opacity:0; transition:opacity .2s; }
+  #bugbook .savedFlash.show{ opacity:1; }
+
+  /* --- setup / connect screen --- */
+  #setupScreen{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    max-width:520px; margin:0 auto; padding:calc(env(safe-area-inset-top,0px) + 28px) 20px 60px;
+  }
+  #setupScreen.hidden{ display:none; }
+  #setupScreen .step{
+    border:1px solid var(--line); background:var(--panel); padding:16px 18px; margin-bottom:14px;
+  }
+  #setupScreen .step h3{ font-size:13px; margin:0 0 8px; letter-spacing:.04em; }
+  #setupScreen .step p{ color:var(--ink-dim); font-size:12.5px; margin:0 0 10px; }
+  #setupScreen input[type=text], #setupScreen input[type=password]{
+    width:100%; background:var(--panel-alt); border:1px solid var(--line); color:var(--ink);
+    font-family:var(--mono); font-size:14px; padding:10px; margin-bottom:8px;
+  }
+  #setupScreen input:focus{ outline:none; border-color:var(--amber); }
+  #setupScreen .statusMsg{ font-family:var(--mono); font-size:11.5px; margin-top:8px; min-height:16px; }
+  #setupScreen .statusMsg.err{ color:var(--red); }
+  #setupScreen .statusMsg.ok{ color:var(--green); }
+  #setupScreen a{ color:var(--amber); }
+</style>
+</head>
+<body>
+
+<!-- ===================== SETUP / CONNECT SCREEN ===================== -->
+<div id="setupScreen">
+  <p class="eyebrow">The Personal Bug Book · Mobile</p>
+  <h1 style="margin-bottom:4px;">Connect to Google Drive</h1>
+  <p class="sub" style="margin-bottom:18px;">One-time setup on this phone. See SETUP.md for how to get these three values.</p>
+
+  <div class="step">
+    <h3>1 · App credentials</h3>
+    <p>Paste the values from your Google Cloud Console project.</p>
+    <label>OAuth Client ID</label>
+    <input type="text" id="cfgClientId" placeholder="xxxxxxxx.apps.googleusercontent.com">
+    <label>API key</label>
+    <input type="text" id="cfgApiKey" placeholder="AIza...">
+    <label>Project number (optional, improves the file picker)</label>
+    <input type="text" id="cfgAppId" placeholder="123456789012">
+    <button class="primary" id="btnSaveConfig">Save</button>
+    <div class="statusMsg" id="configStatus"></div>
+  </div>
+
+  <div class="step">
+    <h3>2 · Sign in</h3>
+    <p>Sign in with the same Google account your Mac's Google Drive is syncing.</p>
+    <button class="primary" id="btnSignIn">Sign in with Google</button>
+    <div class="statusMsg" id="signinStatus"></div>
+  </div>
+
+  <div class="step">
+    <h3>3 · Link your Bug Book file</h3>
+    <p>Pick the existing <code>bugbook-data.json</code> file from your Drive (same file your Mac app writes to).</p>
+    <button class="primary" id="btnPickFile">Choose file…</button>
+    <div class="statusMsg" id="pickStatus"></div>
+  </div>
+
+  <p class="footNote" style="text-align:left;">Credentials and the file link are stored only on this phone (localStorage), never sent anywhere but Google.</p>
+</div>
+
+<!-- ===================== MAIN APP ===================== -->
+<div id="bugbook" class="hidden">
+  <div id="syncBar">
+    <span><span class="dot" id="syncDot"></span><span id="syncLabel">Not connected</span></span>
+    <button id="btnSettings">Settings</button>
+  </div>
+
+  <p class="eyebrow">The Personal Bug Book · Self-Observation Log</p>
+  <div class="headerCard">
+    <p class="sub" style="margin-bottom:6px;">Specimen —</p>
+    <input class="nameInput" id="specName" value="Nick" />
+    <p class="sub" style="margin-top:10px;">Observation goal: identify the precise conditions that maximise creative output, energy, and decision-making clarity.</p>
+    <span class="tag" id="roadblockTag">Roadblock: Poor Self-Care</span>
+  </div>
+
+  <!-- DAILY LEDGER -->
+  <div class="card">
+    <div class="cardHead"><h2>Fig. 01 — Daily Observation Ledger</h2><span class="fig" id="entryCount"></span></div>
+
+    <div class="row3">
+      <div><label>Date</label><input type="date" id="logDate"></div>
+      <div><label>Sleep last night (hrs)</label><input type="number" step="0.1" id="sleepHrs" placeholder="0"></div>
+      <div><label>Deep creative hours</label><input type="number" step="0.1" id="deepHrs" placeholder="0"></div>
+    </div>
+    <div class="row">
+      <div><label>Peak energy window</label><input type="text" id="peakWindow" placeholder="e.g. 8:00–11:00 AM"></div>
+      <div><label>Net day, self-assessed</label>
+        <select id="netDay"><option value="+">+ Net gain</option><option value="neutral">Neutral</option><option value="-">– Net drain</option></select>
+      </div>
+    </div>
+
+    <label>Self-care vitals hit today</label>
+    <div class="vitals" id="vitalsRow"></div>
+
+    <label>Significant incidents</label>
+    <table id="incidentTable">
+      <thead><tr><th style="width:16%">Time</th><th style="width:30%">Context / Trigger</th><th style="width:34%">Reaction / Behaviour</th><th style="width:14%">Net Effect</th><th></th></tr></thead>
+      <tbody id="incidentBody"></tbody>
+    </table>
+    <button class="ghost" id="addIncident">+ Add row</button>
+
+    <div style="margin-top:16px; display:flex; align-items:center;">
+      <button class="primary" id="saveEntry">Save entry</button>
+      <span class="savedFlash" id="savedFlash">Saved.</span>
+    </div>
+  </div>
+
+  <!-- ROLLING STATS -->
+  <div class="card">
+    <div class="cardHead"><h2>Fig. 02 — Rolling Indicators</h2><span class="fig">10-day window</span></div>
+    <div class="statLine"><span>Sleep, 10-day rolling total</span><span id="sleepTotalLabel">0.0 h</span></div>
+    <div class="gauge"><div class="gaugeFill" id="sleepGaugeFill" style="width:0%"></div><div class="gaugeMark" style="left:70%"></div></div>
+    <div class="statLine" style="margin-top:14px;"><span>Self-care score, today</span><span id="careScoreLabel">0 / 7</span></div>
+    <div class="statLine" style="margin-top:10px;"><span>Deep creative hours, 7-day avg</span><span id="deepAvgLabel">0.0 h/day</span></div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="card">
+    <div class="cardHead"><h2>Log History</h2><span class="fig" id="histCount"></span></div>
+    <div id="historyList"></div>
+  </div>
+
+  <!-- WEEKLY SYNTHESIS -->
+  <div class="card">
+    <div class="cardHead"><h2>Fig. 03 — Weekly Synthesis</h2><span class="fig">review every 7 entries</span></div>
+    <p class="sub" style="margin:0 0 12px;">Most-missed vital and net-effect split are computed from the last 7 saved entries.</p>
+    <div class="row">
+      <div><span class="entryMeta">Most-missed self-care vital (7d)</span><div id="autoMissed" style="font-family:var(--mono); font-size:13px; margin-top:4px;">—</div></div>
+      <div><span class="entryMeta">Net-effect split, incidents (7d)</span><div id="autoNet" style="font-family:var(--mono); font-size:13px; margin-top:4px;">—</div></div>
+    </div>
+    <div class="row" style="margin-top:6px;">
+      <div><label>What triggered my highest output this week?</label><textarea id="wkHigh"></textarea></div>
+      <div><label>What caused my biggest drain this week?</label><textarea id="wkDrain"></textarea></div>
+    </div>
+    <label>Hypothesis to test next week ("my bullet")</label>
+    <textarea id="wkBullet" placeholder='e.g. "If I eat lunch away from my desk daily, my 3pm energy dip will shrink."'></textarea>
+    <div style="margin-top:12px; display:flex; align-items:center;">
+      <button class="primary" id="saveWeekly">Save weekly synthesis</button>
+      <span class="savedFlash" id="savedFlashWk">Saved.</span>
+    </div>
+    <div id="weeklyHistory" style="margin-top:14px;"></div>
+  </div>
+
+  <!-- SPECIMEN RULES -->
+  <div class="card">
+    <div class="cardHead"><h2>Fig. 04 — Specimen Rules (Operating System)</h2><span class="fig">edit only when data proves a rule wrong</span></div>
+    <div class="rulesGrid">
+      <div>
+        <div class="ruleLabel">Rule 1 — Sleep</div>
+        <p class="sub" style="margin:2px 0 6px;">I require a minimum of <input type="number" id="ruleSleep" style="width:70px; display:inline-block;" step="0.5"> hours of sleep to function creatively.</p>
+      </div>
+      <div>
+        <div class="ruleLabel">Rule 2 — Environment</div>
+        <textarea id="ruleEnv" placeholder="My optimal physical environment for deep focus is..."></textarea>
+      </div>
+      <div>
+        <div class="ruleLabel">Rule 3 — Boundaries</div>
+        <textarea id="ruleBounds" placeholder="To protect my energy, I must never..."></textarea>
+      </div>
+    </div>
+    <div style="margin-top:12px; display:flex; align-items:center;">
+      <button class="primary" id="saveRules">Save rules</button>
+      <span class="savedFlash" id="savedFlashRules">Saved.</span>
+    </div>
+  </div>
+
+  <!-- REMINDER -->
+  <div class="card">
+    <div class="cardHead"><h2>Daily Reminder</h2><span class="fig">best-effort, Android only</span></div>
+    <p class="sub" style="margin:0 0 12px;">Uses Chrome's periodic background sync, so timing isn't exact and depends on how often you open the app. It is not a substitute for the reliable reminder your Mac menu-bar app already gives you at 8pm — treat this as a bonus nudge.</p>
+    <button class="ghost" id="btnEnableReminder">Enable reminder notifications</button>
+    <div class="statusMsg" id="reminderStatus" style="font-family:var(--mono); font-size:11.5px; margin-top:8px;"></div>
+  </div>
+
+  <p class="footNote">Synced to the same bugbook-data.json in your Google Drive as your Mac. Record facts, not judgments.</p>
+</div>
+
+<script async defer src="https://apis.google.com/js/api.js" onload="onGapiLoad()"></script>
+<script async defer src="https://accounts.google.com/gsi/client" onload="onGisLoad()"></script>
+<script>
+(function(){
+  const VITALS = ["Ate 3 meals","Hydrated (2L+)","Moved 20min+","Exercise (structured)","Outside daylight","Screens off pre-bed","Real social contact"];
+  const SCOPE = "https://www.googleapis.com/auth/drive.file";
+  const LS = {
+    clientId: "bb_client_id", apiKey: "bb_api_key", appId: "bb_app_id",
+    fileId: "bb_file_id", cache: "bb_data_cache"
+  };
+
+  let data = { name:"Nick", entries:[], weekly:[], rules:{sleep:"",env:"",bounds:""} };
+  let incidentRows = [];
+  let activeVitals = new Set();
+
+  let tokenClient = null;
+  let accessToken = null;
+  let gapiInited = false, gisInited = false;
+  let pickerApiLoaded = false;
+
+  const $ = id => document.getElementById(id);
+  const todayStr = () => new Date().toISOString().slice(0,10);
+
+  function cfg(){
+    return {
+      clientId: localStorage.getItem(LS.clientId) || "",
+      apiKey: localStorage.getItem(LS.apiKey) || "",
+      appId: localStorage.getItem(LS.appId) || "",
+      fileId: localStorage.getItem(LS.fileId) || ""
+    };
+  }
+
+  /* ---------------- setup screen wiring ---------------- */
+
+  function refreshSetupScreen(){
+    const c = cfg();
+    $("cfgClientId").value = c.clientId;
+    $("cfgApiKey").value = c.apiKey;
+    $("cfgAppId").value = c.appId;
+    $("btnSignIn").disabled = !(c.clientId && c.apiKey);
+    $("btnPickFile").disabled = !accessToken;
+    if(c.fileId && accessToken){
+      showMainApp();
+    }
+  }
+
+  $("btnSaveConfig").onclick = () => {
+    localStorage.setItem(LS.clientId, $("cfgClientId").value.trim());
+    localStorage.setItem(LS.apiKey, $("cfgApiKey").value.trim());
+    localStorage.setItem(LS.appId, $("cfgAppId").value.trim());
+    $("configStatus").textContent = "Saved.";
+    $("configStatus").className = "statusMsg ok";
+    initAuthIfReady();
+    refreshSetupScreen();
+  };
+
+  $("btnSignIn").onclick = () => {
+    if(!tokenClient){ initAuthIfReady(); }
+    if(!tokenClient){
+      $("signinStatus").textContent = "Save your Client ID and API key first.";
+      $("signinStatus").className = "statusMsg err";
+      return;
+    }
+    tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" });
+  };
+
+  $("btnPickFile").onclick = () => {
+    if(!accessToken){
+      $("pickStatus").textContent = "Sign in first.";
+      $("pickStatus").className = "statusMsg err";
+      return;
+    }
+    openPicker();
+  };
+
+  $("btnSettings").onclick = () => {
+    $("bugbook").classList.add("hidden");
+    $("setupScreen").classList.remove("hidden");
+    refreshSetupScreen();
+  };
+
+  /* ---------------- Google auth / API bootstrap ---------------- */
+
+  window.onGapiLoad = function(){
+    gapi.load("picker", () => { pickerApiLoaded = true; });
+    gapiInited = true;
+  };
+
+  window.onGisLoad = function(){
+    gisInited = true;
+    initAuthIfReady();
+  };
+
+  function initAuthIfReady(){
+    const c = cfg();
+    if(!gisInited || !c.clientId) return;
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: c.clientId,
+      scope: SCOPE,
+      callback: (resp) => {
+        if(resp.error){
+          $("signinStatus").textContent = "Sign-in error: " + resp.error;
+          $("signinStatus").className = "statusMsg err";
+          setSyncStatus(false, "Sign-in failed");
+          return;
+        }
+        accessToken = resp.access_token;
+        $("signinStatus").textContent = "Signed in.";
+        $("signinStatus").className = "statusMsg ok";
+        setSyncStatus(true, "Signed in");
+        refreshSetupScreen();
+        const c2 = cfg();
+        if(c2.fileId){ loadFromDrive(); }
+      }
+    });
+    refreshSetupScreen();
+  }
+
+  function setSyncStatus(ok, label){
+    $("syncDot").className = "dot" + (ok===true ? " ok" : ok===false ? " bad" : "");
+    $("syncLabel").textContent = label;
+  }
+
+  /* ---------------- Google Picker (one-time file link) ---------------- */
+
+  function openPicker(){
+    if(!pickerApiLoaded){
+      $("pickStatus").textContent = "Still loading picker, try again in a second.";
+      $("pickStatus").className = "statusMsg err";
+      return;
+    }
+    const c = cfg();
+    const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(false);
+    const builder = new google.picker.PickerBuilder()
+      .addView(view)
+      .setOAuthToken(accessToken)
+      .setDeveloperKey(c.apiKey)
+      .setCallback(pickerCallback);
+    if(c.appId){ builder.setAppId(c.appId); }
+    builder.build().setVisible(true);
+  }
+
+  function pickerCallback(res){
+    if(res[google.picker.Response.ACTION] === google.picker.Action.PICKED){
+      const doc = res[google.picker.Response.DOCUMENTS][0];
+      const fileId = doc[google.picker.Document.ID];
+      localStorage.setItem(LS.fileId, fileId);
+      $("pickStatus").textContent = "Linked: " + doc[google.picker.Document.NAME];
+      $("pickStatus").className = "statusMsg ok";
+      loadFromDrive();
+    }
+  }
+
+  /* ---------------- Drive read/write ---------------- */
+
+  async function loadFromDrive(){
+    const c = cfg();
+    if(!c.fileId || !accessToken) return;
+    setSyncStatus(null, "Syncing…");
+    try{
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${c.fileId}?alt=media`, {
+        headers: { Authorization: "Bearer " + accessToken }
+      });
+      if(res.status === 401){
+        setSyncStatus(false, "Session expired — sign in again");
+        accessToken = null;
+        return;
+      }
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const parsed = await res.json();
+      data = Object.assign({ name:"Nick", entries:[], weekly:[], rules:{sleep:"",env:"",bounds:""} }, parsed);
+      localStorage.setItem(LS.cache, JSON.stringify(data));
+      setSyncStatus(true, "Synced just now");
+      showMainApp();
+      populateFromData();
+    }catch(e){
+      console.error("Drive load error", e);
+      const cached = localStorage.getItem(LS.cache);
+      if(cached){
+        data = JSON.parse(cached);
+        setSyncStatus(false, "Offline — showing last synced copy");
+        showMainApp();
+        populateFromData();
+      }else{
+        setSyncStatus(false, "Couldn't load — check connection");
+      }
+    }
+  }
+
+  async function saveToDrive(){
+    const c = cfg();
+    if(!c.fileId || !accessToken){
+      setSyncStatus(false, "Not connected — open Settings");
+      return false;
+    }
+    try{
+      const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${c.fileId}?uploadType=media`, {
+        method: "PATCH",
+        headers: {
+          Authorization: "Bearer " + accessToken,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+      if(res.status === 401){
+        setSyncStatus(false, "Session expired — sign in again");
+        accessToken = null;
+        return false;
+      }
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      localStorage.setItem(LS.cache, JSON.stringify(data));
+      setSyncStatus(true, "Synced just now");
+      return true;
+    }catch(e){
+      console.error("Drive save error", e);
+      setSyncStatus(false, "Save failed — check connection");
+      return false;
+    }
+  }
+
+  /* ---------------- app UI (ported from the desktop version) ---------------- */
+
+  function showMainApp(){
+    $("setupScreen").classList.add("hidden");
+    $("bugbook").classList.remove("hidden");
+  }
+
+  function populateFromData(){
+    $("specName").value = data.name || "Nick";
+    $("logDate").value = todayStr();
+    $("ruleSleep").value = data.rules.sleep || "";
+    $("ruleEnv").value = data.rules.env || "";
+    $("ruleBounds").value = data.rules.bounds || "";
+    renderVitals();
+    renderIncidentRows();
+    renderHistory();
+    renderWeeklyHistory();
+    renderStats();
+  }
+
+  function renderVitals(){
+    const wrap = $("vitalsRow");
+    wrap.innerHTML = "";
+    VITALS.forEach(v=>{
+      const el = document.createElement("div");
+      el.className = "vital" + (activeVitals.has(v) ? " on" : "");
+      el.textContent = (activeVitals.has(v) ? "✓ " : "") + v;
+      el.onclick = ()=>{
+        if(activeVitals.has(v)) activeVitals.delete(v); else activeVitals.add(v);
+        renderVitals();
+      };
+      wrap.appendChild(el);
+    });
+  }
+
+  function renderIncidentRows(){
+    const body = $("incidentBody");
+    body.innerHTML = "";
+    incidentRows.forEach((row,i)=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input type="text" data-i="${i}" data-f="time" value="${row.time||''}" placeholder="10:00 AM"></td>
+        <td><input type="text" data-i="${i}" data-f="context" value="${row.context||''}" placeholder="Checking email before writing"></td>
+        <td><input type="text" data-i="${i}" data-f="reaction" value="${row.reaction||''}" placeholder="Felt anxious, lost 2hrs"></td>
+        <td>
+          <select data-i="${i}" data-f="effect">
+            <option value="+" ${row.effect==='+'?'selected':''}>+</option>
+            <option value="neutral" ${row.effect==='neutral'?'selected':''}>Neutral</option>
+            <option value="-" ${row.effect==='-'?'selected':''}>-</option>
+          </select>
+        </td>
+        <td><button class="delRow" data-del="${i}">✕</button></td>`;
+      body.appendChild(tr);
+    });
+    body.querySelectorAll("input,select").forEach(inp=>{
+      inp.addEventListener("input", e=>{
+        const i = +e.target.dataset.i, f = e.target.dataset.f;
+        incidentRows[i][f] = e.target.value;
+      });
+    });
+    body.querySelectorAll("[data-del]").forEach(btn=>{
+      btn.addEventListener("click", e=>{
+        incidentRows.splice(+e.target.dataset.del,1);
+        renderIncidentRows();
+      });
+    });
+  }
+
+  $("addIncident").onclick = ()=>{
+    incidentRows.push({time:"",context:"",reaction:"",effect:"neutral"});
+    renderIncidentRows();
+  };
+
+  function flash(id){
+    const el = $(id);
+    el.classList.add("show");
+    setTimeout(()=>el.classList.remove("show"), 1600);
+  }
+
+  $("saveEntry").onclick = async ()=>{
+    const date = $("logDate").value || todayStr();
+    const entry = {
+      date,
+      sleep: parseFloat($("sleepHrs").value)||0,
+      deep: parseFloat($("deepHrs").value)||0,
+      peakWindow: $("peakWindow").value,
+      netDay: $("netDay").value,
+      vitals: Array.from(activeVitals),
+      incidents: incidentRows.filter(r=>r.time||r.context||r.reaction)
+    };
+    data.entries = data.entries.filter(e=>e.date!==date);
+    data.entries.push(entry);
+    data.entries.sort((a,b)=> a.date.localeCompare(b.date));
+    data.name = $("specName").value || "Nick";
+    if(await saveToDrive()){ flash("savedFlash"); }
+    renderHistory();
+    renderStats();
+  };
+
+  function renderStats(){
+    const last10 = data.entries.slice(-10);
+    const sleepTotal = last10.reduce((s,e)=>s+(e.sleep||0),0);
+    $("sleepTotalLabel").textContent = sleepTotal.toFixed(1) + " h";
+    const pct = Math.min(100, (sleepTotal/100)*100);
+    const fill = $("sleepGaugeFill");
+    fill.style.width = pct + "%";
+    fill.className = "gaugeFill" + (sleepTotal < 70 ? " warn" : "");
+
+    const todayEntry = data.entries.find(e=>e.date===todayStr());
+    const score = todayEntry ? todayEntry.vitals.length : activeVitals.size;
+    $("careScoreLabel").textContent = score + " / 7";
+
+    const last7 = data.entries.slice(-7);
+    const deepAvg = last7.length ? (last7.reduce((s,e)=>s+(e.deep||0),0)/last7.length) : 0;
+    $("deepAvgLabel").textContent = deepAvg.toFixed(1) + " h/day";
+
+    if(last7.length){
+      const missCount = {};
+      VITALS.forEach(v=>missCount[v]=0);
+      last7.forEach(e=>{
+        VITALS.forEach(v=>{ if(!e.vitals.includes(v)) missCount[v]++; });
+      });
+      const worst = Object.entries(missCount).sort((a,b)=>b[1]-a[1])[0];
+      $("autoMissed").textContent = worst[1] > 0 ? `${worst[0]} (missed ${worst[1]}/${last7.length}d)` : "None — full compliance";
+      let plus=0, minus=0, neu=0;
+      last7.forEach(e=> (e.incidents||[]).forEach(i=>{
+        if(i.effect==='+') plus++; else if(i.effect==='-') minus++; else neu++;
+      }));
+      $("autoNet").textContent = `+${plus} / neutral ${neu} / -${minus}`;
+    } else {
+      $("autoMissed").textContent = "—";
+      $("autoNet").textContent = "—";
+    }
+    $("entryCount").textContent = data.entries.length + " total entries";
+    $("histCount").textContent = data.entries.length;
+  }
+
+  function renderHistory(){
+    const wrap = $("historyList");
+    if(!data.entries.length){ wrap.innerHTML = '<div class="empty">No entries logged yet.</div>'; return; }
+    wrap.innerHTML = "";
+    [...data.entries].reverse().forEach(e=>{
+      const div = document.createElement("div");
+      div.className = "entryItem";
+      div.innerHTML = `
+        <div>
+          <div><strong>${e.date}</strong> <span class="entryMeta">— sleep ${e.sleep}h · deep ${e.deep}h · ${e.peakWindow||'no peak window logged'}</span></div>
+          <div class="entryMeta">${e.vitals.length}/7 vitals · ${(e.incidents||[]).length} incident(s) logged · net ${e.netDay}</div>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span class="scoreBadge">${e.vitals.length}/7</span>
+          <button class="delRow" data-deldate="${e.date}">✕</button>
+        </div>`;
+      wrap.appendChild(div);
+    });
+    wrap.querySelectorAll("[data-deldate]").forEach(btn=>{
+      btn.addEventListener("click", async e=>{
+        data.entries = data.entries.filter(en=>en.date!==e.target.dataset.deldate);
+        await saveToDrive();
+        renderHistory();
+        renderStats();
+      });
+    });
+  }
+
+  $("saveWeekly").onclick = async ()=>{
+    const rec = {
+      weekOf: todayStr(),
+      high: $("wkHigh").value,
+      drain: $("wkDrain").value,
+      bullet: $("wkBullet").value
+    };
+    data.weekly.push(rec);
+    if(await saveToDrive()){ flash("savedFlashWk"); }
+    $("wkHigh").value=""; $("wkDrain").value=""; $("wkBullet").value="";
+    renderWeeklyHistory();
+  };
+
+  function renderWeeklyHistory(){
+    const wrap = $("weeklyHistory");
+    if(!data.weekly.length){ wrap.innerHTML = ""; return; }
+    wrap.innerHTML = '<label>Past syntheses</label>';
+    [...data.weekly].reverse().forEach(w=>{
+      const div = document.createElement("div");
+      div.className = "entryItem";
+      div.style.display = "block";
+      div.innerHTML = `<div class="entryMeta">${w.weekOf}</div>
+        <div style="font-size:12.5px; margin-top:3px;"><strong>Bullet:</strong> ${w.bullet || '—'}</div>`;
+      wrap.appendChild(div);
+    });
+  }
+
+  $("saveRules").onclick = async ()=>{
+    data.rules = { sleep: $("ruleSleep").value, env: $("ruleEnv").value, bounds: $("ruleBounds").value };
+    if(await saveToDrive()){ flash("savedFlashRules"); }
+  };
+
+  /* ---------------- PWA install + reminders ---------------- */
+
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(e=>console.error("SW register failed", e));
+    });
+  }
+
+  $("btnEnableReminder").onclick = async ()=>{
+    const status = $("reminderStatus");
+    if(!("Notification" in window)){
+      status.textContent = "Notifications aren't supported in this browser.";
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if(perm !== "granted"){
+      status.textContent = "Permission not granted.";
+      return;
+    }
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      if("periodicSync" in reg){
+        const status2 = await navigator.permissions.query({name:"periodic-background-sync"});
+        if(status2.state === "granted"){
+          await reg.periodicSync.register("bugbook-daily-reminder", { minInterval: 20 * 60 * 60 * 1000 });
+          status.textContent = "Enabled. Chrome decides exact timing based on how often you use the app — it's a bonus nudge, not a precise alarm.";
+        } else {
+          status.textContent = "Periodic background sync isn't available yet — install this app to your home screen and open it a few times, then try again.";
+        }
+      } else {
+        status.textContent = "Your browser doesn't support background reminders. Install to home screen may help, or rely on the Mac reminder.";
+      }
+    }catch(e){
+      console.error(e);
+      status.textContent = "Couldn't enable background reminders on this browser.";
+    }
+  };
+
+  /* ---------------- boot ---------------- */
+
+  data.rules = data.rules || {sleep:"",env:"",bounds:""};
+  incidentRows = [];
+  refreshSetupScreen();
+  initAuthIfReady();
+
+  const c0 = cfg();
+  if(c0.fileId){
+    const cached = localStorage.getItem(LS.cache);
+    if(cached){
+      try{ data = JSON.parse(cached); showMainApp(); populateFromData(); setSyncStatus(null, "Loaded cached copy"); }
+      catch(e){}
+    }
+  }
+})();
+</script>
+</body>
+</html>
