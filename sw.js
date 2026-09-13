@@ -2,7 +2,7 @@
 // Caches the app shell for offline load; never caches Drive API calls.
 // Also handles a best-effort daily reminder via Periodic Background Sync.
 
-const CACHE_NAME = "bugbook-shell-v1";
+const CACHE_NAME = "bugbook-shell-v2";
 const SHELL_FILES = [
   "./",
   "./index.html",

@@ -415,7 +415,13 @@
   let pickerApiLoaded = false;
 
   const $ = id => document.getElementById(id);
-  const todayStr = () => new Date().toISOString().slice(0,10);
+  const todayStr = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,"0");
+    const day = String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  };
 
   function cfg(){
     return {
@@ -450,8 +456,6 @@
     refreshSetupScreen();
   };
 
-  let silentAttemptInProgress = false;
-
   $("btnSignIn").onclick = () => {
     if(!tokenClient){ initAuthIfReady(); }
     if(!tokenClient){
@@ -459,10 +463,7 @@
       $("signinStatus").className = "statusMsg err";
       return;
     }
-    // Try a silent refresh first — if you've already granted access before,
-    // this reuses that grant instead of showing the full consent screen again.
-    silentAttemptInProgress = true;
-    tokenClient.requestAccessToken({ prompt: "" });
+    tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" });
   };
 
   $("btnPickFile").onclick = () => {
@@ -512,19 +513,11 @@
       scope: SCOPE,
       callback: (resp) => {
         if(resp.error){
-          if(silentAttemptInProgress){
-            // Silent refresh couldn't complete without interaction (e.g. first-ever
-            // sign-in, or the grant was revoked) — fall back to the full consent screen.
-            silentAttemptInProgress = false;
-            tokenClient.requestAccessToken({ prompt: "consent" });
-            return;
-          }
           $("signinStatus").textContent = "Sign-in error: " + resp.error;
           $("signinStatus").className = "statusMsg err";
           setSyncStatus(false, "Sign-in failed");
           return;
         }
-        silentAttemptInProgress = false;
         accessToken = resp.access_token;
         $("signinStatus").textContent = "Signed in.";
         $("signinStatus").className = "statusMsg ok";
@@ -807,16 +800,24 @@
   }
 
   $("saveWeekly").onclick = async ()=>{
+    const weekOf = todayStr();
     const rec = {
-      weekOf: todayStr(),
+      weekOf,
       high: $("wkHigh").value,
       drain: $("wkDrain").value,
       bullet: $("wkBullet").value
     };
+    const prevWeekly = data.weekly;
+    data.weekly = data.weekly.filter(w=>w.weekOf!==weekOf);
     data.weekly.push(rec);
-    if(await saveToDrive()){ flash("savedFlashWk"); }
-    $("wkHigh").value=""; $("wkDrain").value=""; $("wkBullet").value="";
-    renderWeeklyHistory();
+    if(await saveToDrive()){
+      flash("savedFlashWk");
+      $("wkHigh").value=""; $("wkDrain").value=""; $("wkBullet").value="";
+      renderWeeklyHistory();
+    } else {
+      data.weekly = prevWeekly;
+      renderWeeklyHistory();
+    }
   };
 
   function renderWeeklyHistory(){
@@ -828,6 +829,8 @@
       div.className = "entryItem";
       div.style.display = "block";
       div.innerHTML = `<div class="entryMeta">${w.weekOf}</div>
+        <div style="font-size:12.5px; margin-top:3px;"><strong>Highest output trigger:</strong> ${w.high || '—'}</div>
+        <div style="font-size:12.5px; margin-top:3px;"><strong>Biggest drain:</strong> ${w.drain || '—'}</div>
         <div style="font-size:12.5px; margin-top:3px;"><strong>Bullet:</strong> ${w.bullet || '—'}</div>`;
       wrap.appendChild(div);
     });
