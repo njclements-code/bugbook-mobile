@@ -828,11 +828,27 @@
       const div = document.createElement("div");
       div.className = "entryItem";
       div.style.display = "block";
-      div.innerHTML = `<div class="entryMeta">${w.weekOf}</div>
+      div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="entryMeta">${w.weekOf}</div>
+          <button class="delRow" data-delweek="${w.weekOf}">✕</button>
+        </div>
         <div style="font-size:12.5px; margin-top:3px;"><strong>Highest output trigger:</strong> ${w.high || '—'}</div>
         <div style="font-size:12.5px; margin-top:3px;"><strong>Biggest drain:</strong> ${w.drain || '—'}</div>
         <div style="font-size:12.5px; margin-top:3px;"><strong>Bullet:</strong> ${w.bullet || '—'}</div>`;
       wrap.appendChild(div);
+    });
+    wrap.querySelectorAll("[data-delweek]").forEach(btn=>{
+      btn.addEventListener("click", async e=>{
+        const delWeek = e.target.dataset.delweek;
+        const prevWeekly = data.weekly;
+        data.weekly = data.weekly.filter(w=>w.weekOf!==delWeek);
+        if(await saveToDrive()){
+          renderWeeklyHistory();
+        } else {
+          data.weekly = prevWeekly;
+          renderWeeklyHistory();
+        }
+      });
     });
   }
 
